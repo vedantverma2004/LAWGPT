@@ -1,47 +1,38 @@
 import streamlit as st
 import requests
-
-# --- UI Setup ---
-st.set_page_config(page_title="LawGPT", layout="centered")
-st.title("📚 LawGPT - Your Legal Assistant")
-st.markdown("Ask any legal question related to Indian or global law.")
-
-# --- Input Section ---
-question = st.text_area("📝 Enter your legal question here:", height=150)
-
-# --- Helper Function to Format Prompt ---
-def format_prompt(question):
-    return f"Answer the following legal question based on Indian law:\n{question}"
-
-# --- API Call to NVIDIA NIMs ---
-def query_nim(formatted_question):
-    url = "https://integrate.api.nvidia.com/v1"  # Replace with actual endpoint
-    headers = {
-        "Authorization": "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",  # Replace with your actual API key
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "prompt": formatted_question,
-        "temperature": 0.7,
-        "max_tokens": 1024
-    }
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code == 200:
-        return response.json().get("answer", "No answer returned.")
+ 
+# 🔐 Embedded NVIDIA API Key (replace with your actual key)
+NVIDIA_API_KEY = "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"
+# Streamlit UI
+st.set_page_config(page_title="LawGPT - Legal Q&A", layout="centered")
+st.title("🧠 LawGPT - Legal Question Answering")
+st.markdown("Ask law-based questions and get intelligent answers powered by NVIDIA's LLM.")
+ 
+# Input field for the legal question
+question = st.text_area("📜 Enter your legal question")
+ 
+# Submit button
+if st.button("Ask"):
+    if not question.strip():
+        st.warning("⚠️ Please enter a legal question before submitting.")
     else:
-        return f"Error: {response.status_code} - {response.text}"
-
-# --- Response Section ---
-if st.button("🔍 Ask LawGPT"):
-    if question.strip():
-        with st.spinner("Thinking..."):
-            formatted_question = format_prompt(question)
-            answer = query_nim(formatted_question)
-            st.markdown("### ✅ Answer:")
-            st.write(answer)
-    else:
-        st.warning("Please enter a legal question before submitting.")
-
-# --- Footer ---
-st.markdown("---")
-st.markdown("Built with ❤️ using NVIDIA NIMs and Streamlit.")
+        payload = {
+            "model": "nvidia/llama3-chatqa-1.5-70b",
+            "messages": [{"role": "user", "content": question}]
+        }
+        headers = {
+            "Authorization": f"Bearer {NVIDIA_API_KEY}",
+            "Content-Type": "application/json"
+        }
+ 
+        with st.spinner("🔍 Getting answer from NVIDIA LLM..."):
+            try:
+                response = requests.post("https://integrate.api.nvidia.com/v1/chat/completions", json=payload, headers=headers)
+                response.raise_for_status()
+                result = response.json()
+                answer = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                st.success("✅ Response:")
+                st.write(answer)
+            except requests.exceptions.RequestException as e:
+                st.error(f"❌ Error communicating with NVIDIA API: {str(e)}")
+ 
